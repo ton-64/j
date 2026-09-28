@@ -13,7 +13,7 @@ TEST_ALLOC(size_t size) {
 
 static inline void
 TEST_FREE(void* ptr, size_t size) {
-    j_unused(size);
+    (void)size;
 
     free(ptr);
 }

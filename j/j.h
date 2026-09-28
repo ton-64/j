@@ -1,6 +1,6 @@
 /*
 
-  j.h - Base library for my projects
+  j.h - Base library for my C projects
 
   MIT License
 
@@ -27,45 +27,8 @@
 #ifndef J_H_
 #define J_H_
 
-#ifdef _WIN32
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-#endif
-
 #include <assert.h>
-#include <string.h>
-
-#ifdef J_BUILD_DLL
-#ifdef _MSC_VER
-#define J_API declspec(dllexport)
-#else
-#define J_API __attribute__((visibility("default")))
-#endif
-#else
-#ifdef _MSC_VER
-#define J_API declspec(dllimport)
-#else
-#define J_API
-#endif
-#endif
-
-#ifdef J_WARN_DEPRECATED
-#if defined(__GNUC__) || defined(__clang__)
-#define j_deprecated(message) __attribute__((deprecated(message)))
-#elif defined(_MSC_VER)
-#define j_deprecated(message) __declspec(deprecated(message))
-#else
-#define j_deprecated(...)
-#endif
-#else
-#define j_deprecated(...)
-#endif
-
-#define j_unused(v)         (void)(v)
-
-#define j_arr_len(arr)      (sizeof(arr) / sizeof(arr[0]))
-#define j_arr_get(arr, pos) (assert((size_t)pos < j_arr_len(arr)), arr[(size_t)pos])
+#include <string.h> /* has <stddef.h> */
 
 typedef struct j_allocator {
     void* (*alloc)(size_t size);
@@ -80,6 +43,8 @@ typedef struct j_allocator {
   do:
        void* vec = get_vec();
        j_vec_to_base(vec);
+
+  Also remember that vectors need explicit initialization.
  */
 
 typedef struct j_vec_base {
@@ -220,20 +185,19 @@ j_vec_deinit(void* vec, const j_allocator_t* allocator) {
 
 void*
 j_vec__ensure_capacity(void* vec, const j_allocator_t* allocator, size_t v) {
+    assert(vec != NULL);
     assert(allocator != NULL);
-    if (vec) {
-        j_vec_base_t* base = j_vec_to_base(vec);
-        void* tmp = j_vec__init_capacity(base->stride, allocator, v);
-        if (!tmp) {
-            return NULL;
-        }
 
-        j_vec_set_len(tmp, base->len);
-        memcpy(tmp, vec, v * base->stride);
-        j_vec_deinit(vec, allocator);
-        return tmp;
+    j_vec_base_t* base = j_vec_to_base(vec);
+    void* tmp = j_vec__init_capacity(base->stride, allocator, v);
+    if (!tmp) {
+        return NULL;
     }
-    return NULL;
+
+    j_vec_set_len(tmp, base->len);
+    memcpy(tmp, vec, v * base->stride);
+    j_vec_deinit(vec, allocator);
+    return tmp;
 }
 
 #endif /* J_IMPLEMENTATION */
