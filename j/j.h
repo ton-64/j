@@ -84,16 +84,22 @@ typedef struct j_vec_base {
 #define j_vec_init_capacity(T, allocator, capacity) ((T*)j_vec__init_capacity(sizeof(T), (allocator), (capacity)))
 #define j_vec_init(T, allocator)                    j_vec_init_capacity(T, (allocator), 0)
 
-#define j_vec_ensure_capacity(vec, allocator, v)                                                                       \
+#define j_vec_resize(vec, allocator, v)                                                                                \
     do {                                                                                                               \
-        void* tmp__ = j_vec__ensure_capacity((vec), (allocator), (v));                                                 \
+        void* tmp__ = j_vec__resize((vec), (allocator), (v));                                                          \
         if (tmp__)                                                                                                     \
             (vec) = tmp__;                                                                                             \
     } while (0)
 
-#define j_vec_shrink_to_fit(vec, allocator)    j_vec_ensure_capacity((vec), (allocator), j_vec_len((vec)))
+#define j_vec_ensure_capacity(vec, allocator, v)                                                                       \
+    do {                                                                                                               \
+        size_t capacity__ = j_vec_capacity((vec));                                                                     \
+        if (capacity__ < (v))                                                                                          \
+            j_vec_resize((vec), (allocator), (v));                                                                     \
+    } while (0)
+#define j_vec_shrink_to_fit(vec, allocator)    j_vec_resize((vec), (allocator), j_vec_len((vec)))
 
-#define j_vec_reserve_exact(vec, allocator, v) j_vec_ensure_capacity((vec), (allocator), j_vec_capacity((vec)) + (v))
+#define j_vec_reserve_exact(vec, allocator, v) j_vec_resize((vec), (allocator), j_vec_capacity((vec)) + (v))
 #define j_vec_reserve(vec, allocator, v)                                                                               \
     do {                                                                                                               \
         size_t capacity__ = j_vec_capacity((vec));                                                                     \
@@ -102,7 +108,7 @@ typedef struct j_vec_base {
             capacity__ = 1;                                                                                            \
         while (capacity__ < req__)                                                                                     \
             capacity__ <<= 1;                                                                                          \
-        j_vec_ensure_capacity((vec), (allocator), capacity__);                                                         \
+        j_vec_resize((vec), (allocator), capacity__);                                                                  \
     } while (0)
 
 #define j_vec_insert_last(vec, allocator, v)                                                                           \
@@ -149,11 +155,11 @@ typedef struct j_vec_base {
 void* j_vec__init_capacity(size_t stride, const j_allocator_t* allocator, size_t capacity);
 
 /*
-  NOTE: This will not set the vector to NULL
-          and it doesnt free the elements inside of the vector
+  This will not set the vector to NULL
+    and it doesnt free the elements inside of the vector
  */
 void j_vec_deinit(void* vec, const j_allocator_t* allocator);
-void* j_vec__ensure_capacity(void* vec, const j_allocator_t* allocator, size_t v);
+void* j_vec__resize(void* vec, const j_allocator_t* allocator, size_t v);
 
 #ifdef J_IMPLEMENTATION
 
@@ -184,7 +190,7 @@ j_vec_deinit(void* vec, const j_allocator_t* allocator) {
 }
 
 void*
-j_vec__ensure_capacity(void* vec, const j_allocator_t* allocator, size_t v) {
+j_vec__resize(void* vec, const j_allocator_t* allocator, size_t v) {
     assert(vec != NULL);
     assert(allocator != NULL);
 
